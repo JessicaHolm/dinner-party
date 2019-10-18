@@ -2,30 +2,36 @@
 
 import sys
 import os.path
-
-def add_vertex(g,v):
-    if v not in g:
-        g[v] = {}
+from random import randrange
 
 def read_people(filename):
     with open(filename + '.txt', "r") as f:
-        g = {}
         num_people = int(f.readline())
+        g = [[0] * num_people for _ in range(num_people)]
         for i,row in zip(range(num_people), f):
             rnums = row.strip().split(" ")
             for j,col in zip(range(num_people), rnums):
-                add_vertex(g,i)
-                add_vertex(g,j)
-                g[i][j] = col
+                num = int(col)
+                g[i][j] = num
+    x = 0
+    for i in range(len(g)):
+        for j in range(x,10):
+            g[i][j] = g[i][j] + g[j][i]
+            g[j][i] = g[i][j]
+        x = x + 1
     return g
 
-def write_dot_graph(name,g):
-    with open(name + '.dot','w') as f:
-        f.write('graph ' + name + ' {') 
-        for v, w in g.items():
-            if v != None and w != None:
-                f.write('"' + str(v) + '" -- "' + str(w) + '"')
-        f.write('}')
+def solve_random(g):
+    x = 0
+    sol = {}
+    while len(sol) < 10:
+        i = randrange(10)
+        j = randrange(10)
+        if i not in sol:
+            sol[i] = x
+            x = x + 1
+    return sol 
+
 
 def usage():
     print('usage: python3 dinner.py hw1-inst1.txt')
@@ -38,8 +44,11 @@ def main():
     if kind == '.txt':
         g = read_people(gname)
     else: usage()
-    print(g)
-    write_dot_graph(gname, g)
+    sol = solve_random(g)
+    for p,s in sol.items():
+        print(p, s)
+        
+    # write_dot_graph(gname, g)
 
 # Read in input txt and make an internal graph
 # Check all 45 unique relationships and find the best score for each person
