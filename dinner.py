@@ -16,7 +16,7 @@ def read_people(filename):
                 g[i][j] = num
     x = 0
     for i in range(len(g)):
-        for j in range(x,10):
+        for j in range(x,num_people):
             g[i][j] = g[i][j] + g[j][i]
             g[j][i] = g[i][j]
         x = x + 1
@@ -42,6 +42,40 @@ def solve_random():
                 sol[p].append(p_list[len(p_list)-5])
             p_list.append(p) 
     return sol 
+
+def solve_heur(g):
+    sol = defaultdict(list)
+    p_list = []
+    p = randrange(10)
+    while len(sol) < 10:
+        p = find_best_neighbor(g, p, p_list)
+        if len(sol) == 0:
+            sol[p].append(None)
+            sol[p].append(None)
+        elif len(sol) < 5:
+            sol[p].append(p_list[len(p_list)-1])
+            sol[p].append(None)
+        elif len(sol) == 5:
+            sol[p].append(None)
+            sol[p].append(p_list[0])
+        else:
+            sol[p].append(p_list[len(p_list)-1])
+            sol[p].append(p_list[len(p_list)-5])
+        p_list.append(p) 
+    return sol 
+
+def find_best_neighbor(g, p, p_list):
+    largest = -427386
+    largest_index = 0
+    for num in g[p]:
+        gene = (i for i, n in enumerate(g[p]) if n == num)
+        for i in gene:
+            if i not in p_list:
+                if num > largest:
+                    largest = num
+                    largest_index = i
+    return largest_index
+            
 
 def find_score(g, sol):
     score = 0
@@ -73,7 +107,8 @@ def main():
     if kind == '.txt':
         g = read_people(gname)
     else: usage()
-    sol = solve_random()
+    # sol = solve_random()
+    sol = solve_heur(g)
     # for row in g:
     #     print(row)
     score = find_score(g, sol)
@@ -82,10 +117,6 @@ def main():
         print(p, s)
     print("\n")
     display_table(sol)
-
-# Check all 45 unique relationships and find the best score for each person
-# Find the overall best score and place those two people across from each other
-# Figure out how to add in host and guest checks
 
 if __name__ == '__main__':
     main()
