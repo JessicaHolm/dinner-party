@@ -3,6 +3,7 @@
 import sys
 import os.path
 from random import randrange
+from collections import defaultdict
 
 def read_people(filename):
     with open(filename + '.txt', "r") as f:
@@ -21,16 +22,44 @@ def read_people(filename):
         x = x + 1
     return g
 
-def solve_random(g):
-    x = 0
-    sol = {}
+def solve_random():
+    sol = defaultdict(list)
+    p_list = []
     while len(sol) < 10:
-        i = randrange(10)
-        j = randrange(10)
-        if i not in sol:
-            sol[i] = x
-            x = x + 1
+        p = randrange(10)
+        if p not in p_list:
+            if len(sol) == 0:
+                sol[p].append(None)
+                sol[p].append(None)
+            elif len(sol) < 5:
+                sol[p].append(p_list[len(p_list)-1])
+                sol[p].append(None)
+            elif len(sol) == 5:
+                sol[p].append(None)
+                sol[p].append(p_list[0])
+            else:
+                sol[p].append(p_list[len(p_list)-1])
+                sol[p].append(p_list[len(p_list)-5])
+            p_list.append(p) 
     return sol 
+
+def find_score(g, sol):
+    score = 0
+    for p, p_list in sol.items():
+        for r in p_list:
+            if r is not None:
+                if (p < 5 and r >= 5) or (p >= 5 and r < 5):
+                    if r == p_list[0]:
+                        score += 1
+                    elif r == p_list[1]:
+                        score += 2
+                score += g[p][r]
+    return score
+
+def display_table(sol):
+    strl = ",".join(map(str, list(sol.keys()))).split(",")
+    for i in range(0,2):
+        print(" ".join(strl[i*5:(i+1)*5]) + "\n")
 
 
 def usage():
@@ -44,17 +73,19 @@ def main():
     if kind == '.txt':
         g = read_people(gname)
     else: usage()
-    sol = solve_random(g)
+    sol = solve_random()
+    # for row in g:
+    #     print(row)
+    score = find_score(g, sol)
+    print("Score: {}\n".format(score))
     for p,s in sol.items():
         print(p, s)
-        
-    # write_dot_graph(gname, g)
+    print("\n")
+    display_table(sol)
 
-# Read in input txt and make an internal graph
 # Check all 45 unique relationships and find the best score for each person
 # Find the overall best score and place those two people across from each other
 # Figure out how to add in host and guest checks
-# Display output
 
 if __name__ == '__main__':
     main()
