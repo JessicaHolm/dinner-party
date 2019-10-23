@@ -21,37 +21,59 @@ class Table(object):
                     g[i][j] = num
 
         # Make the matrix symmetric.
-        x = 0
         for i in range(n):
-            for j in range(x,n):
+            for j in range(i,n):
                 g[i][j] = g[i][j] + g[j][i]
                 g[j][i] = g[i][j]
-            x = x + 1
 
         # Initialize variables.
         self.n = n
-        self.half = int(n/2)
         self.g = g
+        self.half = int(n/2)
+        self.table = [0,1,2,3,4,5,6,7,8,9]
         self.seated = []
+
+    def moves(self):
+        n = self.n
+        ms = []
+        for i in range(n):
+            for j in range(i+1,n):
+                t = (i, j)
+                ms.append(t)
+        return ms
+            
+    def move(self, m):
+        (i, j) = m
+        self.table[i] = j
+        self.table[j] = i
     
     # Place people in seats randomly.
-    def solve_random(self):
-        soln = defaultdict(list)
-        while len(soln) < self.n:
-            p = randrange(self.n)
-            if p not in self.seated:
-                self.create_solution(soln, p)
+    def solve_random(self, nsteps):
+        for _ in range(nsteps):
+            soln = defaultdict(list)
+            self.seated = []
+            while len(soln) < self.n:
+                p = randrange(self.n)
+                if p not in self.seated:
+                    self.create_solution(soln, p)
+            score = self.find_score(soln)
+            if score == 100:
+                print("Score: {}\n".format(score))
         return soln
 
-    # Randomly choose one person for the first seat then
-    # find their best match, place them next to the first
-    # person and continue the process until finished.
-    def solve_greedy(self):
+    def solve_local(self, nsteps):
         soln = defaultdict(list)
-        p = randrange(self.n)
-        while len(soln) < self.n:
-            p = self.find_best_neighbor(p)
-            self.create_solution(soln, p)
+        
+        for _ in range(nsteps):
+            moves = self.moves()
+
+            mnv = []
+            for m in ms:
+                # Do-undo.
+                (f, t) = m
+                self.move((f, t))
+                self.move((t, f))
+        
         return soln
 
     # Adds people to the final solution table.
@@ -73,24 +95,7 @@ class Table(object):
             soln[p].append(self.seated[len(self.seated)-1])
             soln[p].append(self.seated[len(self.seated)-self.half])
         self.seated.append(p)
-
-    # Finds the index of the passed in person's highest match 
-    # according to the preference matrix
-    def find_best_neighbor(self, p):
-        largest = float('-inf')
-        largest_index = 0
-        for num in self.g[p]:
-            # Get index for current num or multiple indexes if
-            # there are duplicate numbers in a row
-            gene = (i for i, n in enumerate(self.g[p]) if n == num)
-            for i in gene:
-                # Only check the indexes of people not already seated
-                if i not in self.seated:
-                    if num > largest:
-                        largest = num
-                        largest_index = i
-        return largest_index
-                
+               
     # Scores a table based on where people are sitting.
     def find_score(self, soln):
         score = 0
@@ -116,25 +121,27 @@ class Table(object):
         for i,p in zip(range(self.n), soln.keys()):
             print("{} {}".format(p+1,i+1))
 
+        # Cite source.
         strl = ",".join(map(str, list(soln.keys()))).split(",")
         for i in range(0,2):
             print(" ".join(strl[i*(self.half):(i+1)*(self.half)]) + "\n")
 
 def usage():
-    print('usage: python3 dinner.py filename solver\n\nfilenames: {hw1-inst1.txt, hw1-inst2.txt, hw1-inst3.txt}\nsolvers: {random, greedy)')
+    print('usage: python3 dinner.py filename solver\n\nfilenames: {hw1-inst1.txt, hw1-inst2.txt, hw1-inst3.txt}\nsolvers: {random, local)')
     exit(0)
 
-if len(sys.argv) < 3: usage()
+if len(sys.argv) != 4: usage()
 filename = sys.argv[1]
 solver = sys.argv[2]
+nsteps = int(sys.argv[3])
 gname,kind = os.path.splitext(filename)
 if kind == '.txt':
     t = Table(filename=gname)
 else: usage()
 if solver == 'random':
-    soln = t.solve_random()
-elif solver == 'greedy':
-    soln = t.solve_greedy()
+    soln = t.solve_random(nsteps)
+elif solver == 'local':
+    soln = t.solve_local()
 else: usage()
 
-t.display_output(soln)
+# t.display_output(soln)
