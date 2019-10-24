@@ -1,11 +1,11 @@
 #!usr/bin/env python3
 
 # Read in and solve a instance of dinner party.
+# Inspired by https://github.com/pdx-cs-ai/slider 
 
 import sys
 import os.path
-from random import randrange
-from collections import defaultdict
+import random
 
 class Table(object):
 
@@ -30,9 +30,10 @@ class Table(object):
         self.n = n
         self.g = g
         self.half = int(n/2)
-        self.table = [0,1,2,3,4,5,6,7,8,9]
-        self.seated = []
+        self.table = list(range(n))
+        random.shuffle(self.table)
 
+    # List of moves possible by switching 2 people at the table.
     def moves(self):
         n = self.n
         ms = []
@@ -42,92 +43,104 @@ class Table(object):
                 ms.append(t)
         return ms
             
+    # Switch 2 people at the table.
     def move(self, m):
         (i, j) = m
-        self.table[i] = j
-        self.table[j] = i
+        tmp = self.table[i]
+        self.table[i] = self.table[j]
+        self.table[j] = tmp
+
+    # Get the score of the current state.
+    def check_score(self):
+        score = 0     
+        n = self.n
+        g = self.g
+        half = self.half
+        table = self.table
+        for i,p in zip(range(n-1), table):
+            if i == half-1:
+                p1 = p
+            else:
+                p1 = table[i+1]
+            if i >= n/2:
+                p2 = p
+            else:
+                p2 = table[i+(half)]
+            score = score + g[p][p1] + g[p][p2]
+            if (p <= 4 and p1 > 4) or (p > 4 and p1 <= 4):
+                score += 1
+            if (p <= 4 and p2 > 4) or (p > 4 and p2 <= 4):
+                score += 2
+        return score
     
-    # Place people in seats randomly.
+    # Randomly search through the state space.
     def solve_random(self, nsteps):
-        for _ in range(nsteps):
-            soln = defaultdict(list)
-            self.seated = []
-            while len(soln) < self.n:
-                p = randrange(self.n)
-                if p not in self.seated:
-                    self.create_solution(soln, p)
-            score = self.find_score(soln)
-            if score == 100:
-                print("Score: {}\n".format(score))
-        return soln
+        soln = []
 
-    def solve_local(self, nsteps):
-        soln = defaultdict(list)
-        
         for _ in range(nsteps):
-            moves = self.moves()
-
+            # Check if at optimal score
+            if self.check_score() == 100:
+                return soln
+            ms = self.moves()
             mnv = []
             for m in ms:
                 # Do-undo.
                 (f, t) = m
                 self.move((f, t))
+                mnv.append(m)
                 self.move((t, f))
-        
+
+            if mnv:
+                m = random.choice(mnv)
+            else:
+                m = random.choice(ms)
+            
+            soln.append(m)
+            self.move(m)
+
         return soln
 
-    # Adds people to the final solution table.
-    def create_solution(self, soln, p):
-        # First seat.
-        if len(soln) == 0:
-            soln[p].append(None)
-            soln[p].append(None)
-        # Seats 1..n/2 or the rest of the first row of seats.
-        elif len(soln) < self.half:
-            soln[p].append(self.seated[len(self.seated)-1])
-            soln[p].append(None)
-        # Seat n/2+1 or the first seat of the second row.
-        elif len(soln) == self.half:
-            soln[p].append(None)
-            soln[p].append(self.seated[0])
-        # Seats n/2+2..n or the rest of the second row.
-        else:
-            soln[p].append(self.seated[len(self.seated)-1])
-            soln[p].append(self.seated[len(self.seated)-self.half])
-        self.seated.append(p)
-               
-    # Scores a table based on where people are sitting.
-    def find_score(self, soln):
-        score = 0
-        for p, seated in soln.items():
-            for r in seated:
-                if r is not None:
-                    if (p < (self.half) and r >= (self.half)) or (p >= (self.half) and r < (self.half)):
-                        # A host and a guest are sitting next to each other.
-                        if r == seated[0]:
-                            score += 1
-                        # A host and a guest are sitting across from each other.
-                        elif r == seated[1]:
-                            score += 2
-                    # Add points according to the preference matrix.
-                    score += self.g[p][r]
-        return score
-    
+    # Local search through the state space choosing the state
+    # that has the largest score each time through the loop.
+    def solve_local(self, nsteps):
+        soln = []
+
+        for _ in range(nsteps):
+            ms = self.moves()
+            mnv = []
+
+            for m in ms:
+                # Do-undo.
+                (f, t) = m
+                self.move((f, t))
+                c = self.check_score()
+                mnv.append((c, m))
+                self.move((t, f))
+
+            mc = max(mnv, key=lambda m: m[0])
+            ms = [m[1] for m in mnv if m[0] == mc[0]]
+            m = random.choice(ms)
+            soln.append(m)
+            self.move(m)
+
+        return soln
+
     # Shows the score and solution table.
     def display_output(self, soln):
-        score = self.find_score(soln)
+        score = self.check_score()
         print("Score: {}\n".format(score))
 
-        for i,p in zip(range(self.n), soln.keys()):
+        for i,p in zip(range(self.n), self.table):
             print("{} {}".format(p+1,i+1))
 
-        # Cite source.
-        strl = ",".join(map(str, list(soln.keys()))).split(",")
+        strl = ",".join(map(str, list(self.table))).split(",")
         for i in range(0,2):
             print(" ".join(strl[i*(self.half):(i+1)*(self.half)]) + "\n")
 
+        # print("Solution length: {}".format(len(soln)))
+
 def usage():
-    print('usage: python3 dinner.py filename solver\n\nfilenames: {hw1-inst1.txt, hw1-inst2.txt, hw1-inst3.txt}\nsolvers: {random, local)')
+    print('usage: python3 dinner.py filename solvern nsteps\n\nsolvers: {random, local)')
     exit(0)
 
 if len(sys.argv) != 4: usage()
@@ -141,7 +154,7 @@ else: usage()
 if solver == 'random':
     soln = t.solve_random(nsteps)
 elif solver == 'local':
-    soln = t.solve_local()
+    soln = t.solve_local(nsteps)
 else: usage()
 
-# t.display_output(soln)
+t.display_output(soln)
