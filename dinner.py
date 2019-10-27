@@ -4,14 +4,13 @@
 # Inspired by https://github.com/pdx-cs-ai/slider 
 
 import sys
-import os.path
 import random
 
 class Table(object):
 
     # Create the scoring matrix.
     def __init__(self, filename):
-        with open(filename + '.txt', "r") as f:
+        with open(filename, "r") as f:
             n = int(f.readline())
             g = [[0] * n for _ in range(n)]
             for i,row in zip(range(n), f):
@@ -31,6 +30,8 @@ class Table(object):
         self.g = g
         self.half = int(n/2)
         self.table = list(range(n))
+        self.possible_moves = self.moves
+        self.filename = filename
         random.shuffle(self.table)
 
     # List of moves possible by switching 2 people at the table.
@@ -49,6 +50,19 @@ class Table(object):
         tmp = self.table[i]
         self.table[i] = self.table[j]
         self.table[j] = tmp
+
+    # Check to see if the score is "good enough" to pass.
+    def goal(self):
+        if self.filename == "hw1-inst1.txt":
+            if self.check_score() == 100:
+                return True
+        elif self.filename == "hw1-inst2.txt":
+            if self.check_score() >= 510:
+                return True
+        elif self.filename == "hw1-inst3.txt":
+            if self.check_score() >= 110:
+                return True
+        return False
 
     # Get the score of the current state.
     def check_score(self):
@@ -78,10 +92,10 @@ class Table(object):
         soln = []
 
         for _ in range(nsteps):
-            # Check if at optimal score
-            if self.check_score() == 100:
+            if self.goal():
                 return soln
-            ms = self.moves()
+
+            ms = self.possible_moves()
             mnv = []
             for m in ms:
                 # Do-undo.
@@ -106,9 +120,14 @@ class Table(object):
         soln = []
 
         for _ in range(nsteps):
-            ms = self.moves()
-            mnv = []
+            if self.goal():
+                return soln
+            elif len(soln) != len(set(soln)):
+                random.shuffle(self.table)
+                soln.clear()
 
+            ms = self.possible_moves()
+            mnv = []
             for m in ms:
                 # Do-undo.
                 (f, t) = m
@@ -120,6 +139,7 @@ class Table(object):
             mc = max(mnv, key=lambda m: m[0])
             ms = [m[1] for m in mnv if m[0] == mc[0]]
             m = random.choice(ms)
+
             soln.append(m)
             self.move(m)
 
@@ -137,24 +157,18 @@ class Table(object):
         for i in range(0,2):
             print(" ".join(strl[i*(self.half):(i+1)*(self.half)]) + "\n")
 
-        # print("Solution length: {}".format(len(soln)))
-
 def usage():
-    print('usage: python3 dinner.py filename solvern nsteps\n\nsolvers: {random, local)')
+    print('usage: python3 dinner.py filename solver\n\nsolvers: {random, local)')
     exit(0)
 
-if len(sys.argv) != 4: usage()
+if len(sys.argv) != 3: usage()
 filename = sys.argv[1]
 solver = sys.argv[2]
-nsteps = int(sys.argv[3])
-gname,kind = os.path.splitext(filename)
-if kind == '.txt':
-    t = Table(filename=gname)
-else: usage()
+t = Table(filename)
 if solver == 'random':
-    soln = t.solve_random(nsteps)
+    soln = t.solve_random(t.n*1000)
 elif solver == 'local':
-    soln = t.solve_local(nsteps)
+    soln = t.solve_local(t.n*1000)
 else: usage()
 
 t.display_output(soln)
