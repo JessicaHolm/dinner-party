@@ -1,0 +1,41 @@
+Jason Holm jholm@pdx.edu
+Dinner Party
+
+I implemented a version of local search similar to what was shown in class for the sliding tile puzzles.
+This search takes a random start state and looks at all of the possible swaps of 2 people and chooses the
+one with the highest score. Then it continues this process until its reached the best state it can which 
+is the local maximum. For my implementation I used restarts to get out of local maxima. For the program
+to terminate it must reach a certain score threshold that the user enters from the command line. The
+program local searches until it hits a maximum and then if that maximum is less than the required score
+to terminate a restart occurs and a new random start state is chosen. 
+
+This isn't the best way of solving the problem but it's not that bad. My implementation can score 100 in 
+instance 1 in about 0.1 seconds or less every time. For instance 2 it can generally get a score of 510 or 
+greater in less than 10 seconds but sometimes makes much longer due to randomness of start states. There 
+are similar results for instance 3. It generally gets 110 or greater in 10 seconds or less but can be 
+much longer.
+
+Pseudo code for local search as implemented in dinner party adapted from pdx-cs-ai/slider:
+
+solution ← empty
+for i in range 0..10000
+
+    if puzzle.score == goal_score
+        return solution
+    else if current_state == local_maximum
+        restart()
+
+    moves ← all_moves
+    for m in moves
+        puzzle.move(m)
+        check_score()
+        candidate_moves.append(m)
+        puzzle.unmove(m)
+
+    best_move ← max(candidate_moves)
+    solution.append(best_move)
+    puzzle.move(best_move)
+
+return solution
+
+My testing was done on Windows Subsystem for Linux (WSL) under Ubuntu using a Intel i5-4460 CPU @ 3.20GHz.

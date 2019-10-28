@@ -9,7 +9,7 @@ import random
 class Table(object):
 
     # Create the scoring matrix.
-    def __init__(self, filename):
+    def __init__(self, filename, final_score):
         with open(filename, "r") as f:
             n = int(f.readline())
             g = [[0] * n for _ in range(n)]
@@ -31,7 +31,7 @@ class Table(object):
         self.half = int(n/2)
         self.table = list(range(n))
         self.possible_moves = self.moves
-        self.filename = filename
+        self.final_score = final_score
         random.shuffle(self.table)
 
     # List of moves possible by switching 2 people at the table.
@@ -53,15 +53,8 @@ class Table(object):
 
     # Check to see if the score is "good enough" to pass.
     def goal(self):
-        if self.filename == "hw1-inst1.txt":
-            if self.check_score() == 100:
-                return True
-        elif self.filename == "hw1-inst2.txt":
-            if self.check_score() >= 510:
-                return True
-        elif self.filename == "hw1-inst3.txt":
-            if self.check_score() >= 110:
-                return True
+        if self.check_score() >= self.final_score:
+            return True
         return False
 
     # Get the score of the current state.
@@ -122,6 +115,7 @@ class Table(object):
         for _ in range(nsteps):
             if self.goal():
                 return soln
+            # Local maximum hit, restart.
             elif len(soln) != len(set(soln)):
                 random.shuffle(self.table)
                 soln.clear()
@@ -153,18 +147,15 @@ class Table(object):
         for i,p in zip(range(self.n), self.table):
             print("{} {}".format(p+1,i+1))
 
-        strl = ",".join(map(str, list(self.table))).split(",")
-        for i in range(0,2):
-            print(" ".join(strl[i*(self.half):(i+1)*(self.half)]) + "\n")
-
 def usage():
-    print('usage: python3 dinner.py filename solver\n\nsolvers: {random, local)')
+    print('usage: python3 dinner.py filename solver wanted score\n\nsolvers: {random, local)')
     exit(0)
 
-if len(sys.argv) != 3: usage()
+if len(sys.argv) != 4: usage()
 filename = sys.argv[1]
 solver = sys.argv[2]
-t = Table(filename)
+final_score = int(sys.argv[3])
+t = Table(filename, final_score)
 if solver == 'random':
     soln = t.solve_random(t.n*1000)
 elif solver == 'local':
